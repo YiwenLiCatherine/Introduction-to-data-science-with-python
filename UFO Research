@@ -1,0 +1,275 @@
+#%% md
+
+UFO Sightings Analysis Project
+the-trindade-Island-ufo-mystery.jpg
+
+#%% md
+
+Overview of UFO Sightings Datasets
+This dataset contains over 80,000 reports of UFO sightings over the last century all over the world.
+
+The goal of this project is to walk through an end to end process of analysing a dataset and introduce what we've learned over the last 3 weeks and it will be covered in this project. Our simple analytical process will include some steps for exploring our dataset, and use methods and functions from built-int libraries to visualize the data.
+
+#%% md
+
+Getting Started
+To get started, we will need to:
+
+Download the data from: https://www.kaggle.com/NUFORC/ufo-sightings
+
+Extract the zip file called "ufo-sightseeings.zip"
+
+#%%
+
+Importing the libraries
+Here we will import several libraries that will be useful for our project
+import numpy as np # Linear Algebra
+import pandas as pd # Data Processing and data manipulation including csv files I/O
+import matplotlib.pyplot as plt # Create visualization and plots for data
+import seaborn as sns # Advanced library for visualization
+
+Some extra Libraries
+import plotly as py # visualization library
+from plotly.offline import init_notebook_mode, iplot # plotly offline mode
+init_notebook_mode(connected=True)
+import plotly.graph_objs as go # plotly graphical object
+from wordcloud import WordCloud # Create word cloud
+
+#%%
+
+plt.style.use('dark_background')
+
+#%% md
+
+Load and read the Data
+Now we need to upload and read the data as the command below and we will see a table of data.
+#%%
+
+ufo = pd.read_csv("ufo.csv", low_memory = False)
+ufo
+
+#%% md
+
+Exploring the Data
+We will start our data exploration by generating simple statistics of the data.
+Let us look at what the data information are using a pandas method called "pd.info()".
+
+#%%
+
+ufo.info()
+
+#%%
+
+ufo.country.unique() # This method allows us to know how many countries totally
+
+#%% md
+
+us: United Stated, gb: great Britain, ca: Canada, au: Australia, de: Germany, nan: not-an-number. Nan stands for not-an-number, basically it's an empty data, so we will change it to 'other' instead.
+
+#%%
+
+ufo['country'] = ufo['country'].fillna('other')
+ufo.country.unique()
+
+#%%
+
+def year(x):
+x= x.split(' ')[0]
+x = x.split('/')[2]
+x = int(x)
+return x
+
+#%%
+
+To make it less redundant, we will add 2 more columns including Sight_year and Posted_year rather than focusing on the exact time on 2 columns datetime and date posted
+ufo['Sight_year'] = ufo['datetime'].apply(year)
+ufo['Posted_year'] = ufo['date posted'].apply(year)
+
+#%%
+
+ufo.sample(5)
+
+#%%
+
+def month(x):
+x = int(x.split("/")[0])
+return x
+
+ufo['month'] = ufo['datetime'].apply(month) # add column month
+
+#%%
+
+ufo.sample(5)
+
+#%% md
+
+Let's visualize!
+Untitled.png
+
+#%%
+
+country = ufo.groupby('country').size()
+
+#%%
+
+fre_country = country.sort_values(ascending =False)
+fre_country
+
+#%%
+
+country_sightings = ufo.country.value_counts() # number of ufo sightings per country
+explode = (0, 0, 0, 0., 0.05, 0.08)
+colors = ['red','gold','yellowgreen','lightcoral','orange','lightblue']
+country_sightings.plot(kind = 'pie', fontsize = 0, title='UFO Sightings by Country', colors=colors,
+autopct='%1.1f%%', explode=explode,figsize=(7,7))
+plt.legend(labels=['United States','other','Canada','United Kingdom','Australia','Germany'], loc="best",ncol=2,fontsize='small')
+plt.tight_layout()
+
+#%%
+
+mapPlotData = ufo[ufo.Sight_year>2009].copy()
+mapPlotData.insert(14, "color", "Any")
+mapPlotData.loc[mapPlotData['country'] == "us", "color"] = "red"
+mapPlotData.loc[mapPlotData['country'] == "gb", "color"] = "green"
+mapPlotData.loc[mapPlotData['country'] == "ca", "color"] = "orange"
+mapPlotData.loc[mapPlotData['country'] == "au", "color"] = "black"
+mapPlotData.loc[mapPlotData['country'] == "de", "color"] = "darkviolet"
+mapPlotData.loc[mapPlotData['country'] == "other", "color"] = "blue"
+
+#%%
+
+mapData = [dict(
+type = 'scattergeo',
+lon = mapPlotData.iloc[:,10],
+lat = mapPlotData.latitude,
+hoverinfo = 'text',
+text = "Sigth Location: " + mapPlotData.country,
+mode = 'markers',
+marker = dict(
+sizemode = 'area',
+sizeref = 1,
+size= 10,
+color = mapPlotData["color"],
+line = dict(width = 1, color = "white"),
+opacity = 0.7),
+)]
+layout = dict(
+title = 'UFO Sightings Between 2010 - 2014',
+hovermode = 'closest',
+width = 1500,
+height = 900,
+geo = dict(showframe = False,
+showland = True,
+showcoastlines = True,
+showcountries = True,
+countrywidth = 1,
+projection = dict(type = 'mercator'),
+landcolor = 'rgb(217, 217, 217)',
+subunitwidth = 1,
+showlakes = True,
+lakecolor = 'rgb(255, 255, 255)',
+countrycolor = "rgb(5, 5, 5)")
+)
+fig = go.Figure(data = mapData, layout = layout)
+
+#%% md
+
+newplot.png
+
+#%%
+
+duration_sec = [i for i in ufo["duration (seconds)"].value_counts()]
+duration_sec_list = []
+for i in duration_sec:
+if i in range(0,16):
+duration_sec_list.append("0-15")
+if i in range(15,31):
+duration_sec_list.append("15-30")
+if i in range(31,61):
+duration_sec_list.append("30-60")
+if i in range(60,121):
+duration_sec_list.append("60-120")
+if i in range(120,241):
+duration_sec_list.append("120-240")
+
+#%%
+
+plt.subplots(figsize=(22,10))
+duration_sec_list = pd.Series(duration_sec_list)
+di = duration_sec_list.value_counts().index
+dv = duration_sec_list.value_counts().values
+sns.barplot(di,dv)
+
+plt.xlabel("Time - Seconds",fontsize=24)
+plt.xticks(fontsize=20)
+plt.ylabel("Rates",fontsize=24)
+plt.yticks(fontsize=20)
+
+plt.show()
+
+#%%
+
+def plot_month_frequencies():
+f, ax = plt.subplots(figsize=(20, 10))
+x = months_labels
+y = months_frequencies
+ax.set_title('Global UFO Sightings by Month',fontsize=20)
+ax.set_xlabel('Month')
+ax.set_ylabel('Sightings')
+plt.xticks(fontsize=20)
+plt.yticks(fontsize=20)
+sns.barplot(x=x, y=y, palette="summer", ax=ax)
+
+#%%
+
+month_data = (ufo['month'].value_counts()).sort_index() # sort the index to put back into order for months in a year
+months_labels = month_data.index # x labels
+months_frequencies = month_data.get_values() # y vals
+
+plot_month_frequencies()
+
+#%%
+
+states_us = ufo['shape'].value_counts().index
+states_ratio = ufo['shape'].value_counts().values
+
+plt.subplots(figsize=(24,15))
+sns.barplot(y=states_us[:21], x=states_ratio[:21])
+plt.xticks(fontsize=18)
+plt.yticks(fontsize=30)
+
+plt.show()
+
+#%%
+
+a = ufo['Sight_year'].value_counts()
+b = ufo['Posted_year'].value_counts()
+a = a.sort_index()
+b = b.sort_index()
+
+#%%
+
+plt.subplots(figsize=(20,10))
+plt.title("Sight and Report by year")
+plt.plot(a.index[:-1],a.values[:-1], marker = 'o')
+plt.plot(b.index[:-1],b.values[:-1],marker='x', color = 'orange')
+plt.xticks(fontsize = 15)
+plt.yticks(fontsize = 15)
+plt.legend(labels=['Sight year','Public Posted year'])
+
+#%%
+
+words = [i for i in ufo.comments.dropna()]
+
+words = " ".join(words)
+
+plt.subplots(figsize=(28,12))
+wordcloud = WordCloud(background_color='black',width=2048,height=1024).generate(words)
+plt.imshow(wordcloud)
+plt.axis('off')
+
+plt.show()
+
+#%% md
+
+thanks.png
